@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Razorpay Integration</title>
+</head>
+<body>
+  <h1>Test Product</h1>
+  <p>Price: ₹499</p>
+  <button id="pay-button">Pay Now</button>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    document.getElementById('pay-button').onclick = async function (e) {
+      e.preventDefault();
+
+      // Fetch the key from the server
+      const keyResponse = await fetch('/get-razorpay-key');
+      const keyData = await keyResponse.json();
+      const razorpayKey = keyData.key;
+
+      // Create the order
+      const orderResponse = await fetch('/create-order', {
+        method: 'POST',
+      });
+      const order = await orderResponse.json();
+
+      const options = {
+        key: razorpayKey,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Test Product',
+        description: 'A short description of the product',
+        order_id: order.id,
+        handler: function (response) {
+          alert('Payment successful: ' + response.razorpay_payment_id);
+        },
+        prefill: {
+          name: 'Test User',
+          email: 'test.user@example.com',
+          contact: '9999999999',
+        },
+        notes: {
+          address: 'Test Address',
+        },
+        theme: {
+          color: '#3399cc',
+        },
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.open();
+    };
+  </script>
+</body>
+</html>
