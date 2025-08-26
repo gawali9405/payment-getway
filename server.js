@@ -1,39 +1,44 @@
 require('dotenv').config();
 const express = require('express');
-const Razorpay = require('razorpay');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const path = require('path');
 
 const app = express();
 const port = 3000;
 
-// Initialize Razorpay with keys from .env file
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/get-razorpay-key', (req, res) => {
-  res.json({ key: process.env.RAZORPAY_KEY_ID });
+app.post('/create-checkout-session', async (req, res) => {
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [
+                {
+                    price_data: {
+                        currency: 'inr',
+                        product_data: {
+                            name: 'Test Product',
+                        },
+                        unit_amount: 49900,
+                    },
+                    quantity: 1,
+                },
+            ],
+            mode: 'payment',
+            success_url: `http://localhost:${port}/success.html`,
+            cancel_url: `http://localhost:${port}/cancel.html`,
+        });
+        res.json({ id: session.id });
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
 });
 
-app.post('/create-order', async (req, res) => {
-  const options = {
-    amount: 49900,  
-    currency: 'INR',
-    receipt: 'order_rcptid_11',
-  };
-
-  try {
-    const order = await razorpay.orders.create(options);
-    res.json(order);
-  } catch (error) {
-    res.status(500).send(error);
-  }
+app.get('/stripe-key', (req, res) => {
+  res.json({ key: process.env.STRIPE_PUBLISHABLE_KEY });
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+    console.log(`Server is running on http://localhost:${port}`);
 });

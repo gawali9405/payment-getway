@@ -1,56 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Razorpay Integration</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stripe Integration - Product Page</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 350px;
+    }
+    .product-img {
+      width: 100%;
+      border-radius: 10px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin: 15px 0 5px;
+    }
+    p {
+      font-size: 1.1rem;
+      margin: 5px 0 15px;
+      color: #444;
+    }
+    button {
+      background: #635bff;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #5146e1;
+    }
+  </style>
 </head>
 <body>
-  <h1>Test Product</h1>
-  <p>Price: ₹499</p>
-  <button id="pay-button">Pay Now</button>
+  <div class="container">
+    <img src="https://www.simpleskincare.in/cdn/shop/files/WB_Gel_creme.jpg?v=1721648132&width=1500" 
+         alt="Moisturizing Gel Cream" 
+         class="product-img">
+    <h1>Moisturizing Gel Cream</h1>
+    <p>Hydrating skincare gel for smooth & fresh skin.</p>
+    <p><strong>Price: ₹499</strong></p>
+    <button id="pay-button">Buy Now</button>
+  </div>
 
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
     document.getElementById('pay-button').onclick = async function (e) {
       e.preventDefault();
 
-      // Fetch the key from the server
-      const keyResponse = await fetch('/get-razorpay-key');
+      // Get Stripe publishable key
+      const keyResponse = await fetch('/stripe-key');
       const keyData = await keyResponse.json();
-      const razorpayKey = keyData.key;
+      const stripe = Stripe(keyData.key);
 
-      // Create the order
-      const orderResponse = await fetch('/create-order', {
+      // Create Checkout Session
+      const sessionResponse = await fetch('/create-checkout-session', {
         method: 'POST',
       });
-      const order = await orderResponse.json();
+      const session = await sessionResponse.json();
 
-      const options = {
-        key: razorpayKey,
-        amount: order.amount,
-        currency: order.currency,
-        name: 'Test Product',
-        description: 'A short description of the product',
-        order_id: order.id,
-        handler: function (response) {
-          alert('Payment successful: ' + response.razorpay_payment_id);
-        },
-        prefill: {
-          name: 'Test User',
-          email: 'test.user@example.com',
-          contact: '9999999999',
-        },
-        notes: {
-          address: 'Test Address',
-        },
-        theme: {
-          color: '#3399cc',
-        },
-      };
+      // Redirect to Stripe Checkout
+      const result = await stripe.redirectToCheckout({
+        sessionId: session.id,
+      });
 
-      const rzp = new Razorpay(options);
-      rzp.open();
+      if (result.error) {
+        alert(result.error.message);
+      }
     };
   </script>
 </body>
