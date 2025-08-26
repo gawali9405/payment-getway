@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const path = require('path');
+const QRCode = require('qrcode');
 
 const app = express();
 const port = 3000;
@@ -29,7 +30,8 @@ app.post('/create-checkout-session', async (req, res) => {
             success_url: `http://localhost:${port}/success.html`,
             cancel_url: `http://localhost:${port}/cancel.html`,
         });
-        res.json({ id: session.id });
+        const qrCodeDataUrl = await QRCode.toDataURL(session.url);
+        res.json({ id: session.id, qrCode: qrCodeDataUrl });
     } catch (error) {
         res.status(500).send(error.message);
     }

@@ -59,27 +59,61 @@
     <h1>Moisturizing Gel Cream</h1>
     <p>Hydrating skincare gel for smooth & fresh skin.</p>
     <p><strong>Price: ₹499</strong></p>
-    <button id="pay-button">Buy Now</button>
+    <button id="pay-button">Generate QR Code</button>
+    <div id="qrcode-container" style="margin-top: 20px; display: none;">
+      <p>Scan to pay:</p>
+      <img id="qrcode-img" src="" alt="Payment QR Code" style="max-width: 100%;" />
+      <button id="pay-with-card-button" style="margin-top: 15px;">Pay with Card Instead</button>
+    </div>
   </div>
 
   <script>
-    document.getElementById('pay-button').onclick = async function (e) {
+    const payButton = document.getElementById('pay-button');
+    const qrContainer = document.getElementById('qrcode-container');
+    const qrImage = document.getElementById('qrcode-img');
+    const payWithCardButton = document.getElementById('pay-with-card-button');
+    let checkoutSessionId;
+
+    payButton.onclick = async function (e) {
       e.preventDefault();
+      payButton.disabled = true;
+      payButton.textContent = 'Generating...';
+
+      try {
+        // Create Checkout Session
+        const sessionResponse = await fetch('/create-checkout-session', {
+          method: 'POST',
+        });
+        const session = await sessionResponse.json();
+        checkoutSessionId = session.id;
+
+        // Display QR Code
+        qrImage.src = session.qrCode;
+        qrContainer.style.display = 'block';
+        payButton.style.display = 'none';
+
+      } catch (error) {
+        alert('Could not create payment session.');
+        payButton.disabled = false;
+        payButton.textContent = 'Generate QR Code';
+      }
+    };
+
+    payWithCardButton.onclick = async function (e) {
+      e.preventDefault();
+      if (!checkoutSessionId) {
+        alert('Please generate a QR code first.');
+        return;
+      }
 
       // Get Stripe publishable key
       const keyResponse = await fetch('/stripe-key');
       const keyData = await keyResponse.json();
       const stripe = Stripe(keyData.key);
 
-      // Create Checkout Session
-      const sessionResponse = await fetch('/create-checkout-session', {
-        method: 'POST',
-      });
-      const session = await sessionResponse.json();
-
       // Redirect to Stripe Checkout
       const result = await stripe.redirectToCheckout({
-        sessionId: session.id,
+        sessionId: checkoutSessionId,
       });
 
       if (result.error) {
